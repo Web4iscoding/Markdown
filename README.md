@@ -23,8 +23,20 @@ The geometric margin is $\frac{2}{\|a\|}$. Maximizing the margin is equivalent t
 **Support Vectors**
 The data points that lie exactly on the margin boundaries ($y_k(a^T x_k + b) = 1$) are called **support vectors**. These are the critical samples that define the position and orientation of the hyperplane. Removing any non-support-vector point would not change the decision boundary.
 
+**Hard-Margin SVM**
+The hard-margin SVM is the original, strict formulation. It requires that **every** training sample be correctly classified with at least unit margin:
+
+$$\min_{a, b} \;\frac{1}{2}\|a\|^2 \quad \text{subject to} \quad y_k(a^T x_k + b) \geq 1 \;\;\forall\, k$$
+
+This works only when the data is **perfectly linearly separable** — no sample is allowed to fall inside the margin or on the wrong side of the boundary. In practice, hard-margin SVM has two critical limitations:
+
+1. **Sensitivity to outliers**: A single mislabeled or noisy point on the wrong side can make the problem infeasible (no valid separating hyperplane exists).
+2. **Inapplicability to real data**: Most real-world datasets (including the Adult Income dataset used here) are not linearly separable — some overlap between classes is inevitable.
+
+Because of these limitations, the hard-margin SVM is rarely used in practice and is instead replaced by the **soft-margin** formulation.
+
 **Soft-Margin SVM (Hinge Loss)**
-Real-world data is rarely linearly separable. The soft-margin SVM allows some misclassifications by introducing a **hinge loss**:
+Real-world data is rarely linearly separable. The soft-margin SVM relaxes the hard-margin constraint by allowing some misclassifications, introducing **slack variables** $\xi_k \geq 0$ that measure how much each sample violates the margin. This is equivalent to minimizing the **hinge loss**:
 
 $$\ell(x_k, y_k) = \max\bigl(0,\; 1 - y_k(a^T x_k + b)\bigr)$$
 
