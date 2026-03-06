@@ -106,7 +106,7 @@ The rapid initial increase followed by a gradual plateau is characteristic of gr
 
 ![Error vs Training Set Size](plot_error_vs_training_size.png)
 
-For each $k \in \{10, 20, 30, \dots, 380, 390, 400\}$, a random subset of size $k$ was drawn from the training data, the logistic regression model was retrained on that subset, and both training and test errors were computed.
+For each $k \in \{10, 20, 30, \dots, 380, 390, 400\}$, a random subset of size $k$ was drawn from the training data, and the logistic regression model was retrained on that subset using a learning rate of $\eta = 0.1$ for 200 epochs. Both training error (on the $k$ random instances) and test error (on the original test set) were then computed.
 
 ### Observations
 
