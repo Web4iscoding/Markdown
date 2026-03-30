@@ -10,14 +10,19 @@ The project targets the online fashion retail domain. Compared with a general-pu
 
 Based on this product domain, the team selected the following requirement blocks from the system specification:
 
+Basic requirement blocks (compulsory):
+
 - Block A: Core functions
 - Block B: Multiple photos and order processing
 - Block F: Multiple vendors
+
+Further requirement blocks (optional):
+
 - Block T: User generated content
 - Block U: Wish list and promotional pricing strategy
 - Block X: User experience design
 
-These blocks were selected because they fit the intended marketplace model and because together they form a coherent user journey: discover products, evaluate them visually, save or buy them, receive updates, and interact with vendors in a multi-store environment.
+Blocks A, B, and F form the compulsory foundation of the project and must be implemented to satisfy the baseline requirements. Blocks T, U, and X are optional further requirement blocks chosen to extend the system beyond the minimum. Together, the six blocks fit the intended marketplace model and form a coherent user journey: discover products, evaluate them visually, save or buy them, receive updates, and interact with vendors in a multi-store environment.
 
 ### 3.1.2 Requirement Elicitation Approach
 
@@ -105,18 +110,18 @@ These considerations are reflected most clearly in Block X and are discussed fur
 
 ## 3.3 Implemented Features of the Specification
 
-This section evaluates the chosen specification blocks against the developed system. For each block an overview is given first, followed by a per-item table that maps every specification requirement to its implementation status.
+This section evaluates the chosen specification blocks against the developed system. The three basic requirement blocks (A, B, F) are presented first, followed by the three further requirement blocks (T, U, X). For each block an overview is given first, followed by a per-item table that maps every specification requirement to its implementation status.
 
-| Block | Overall status |
+| Block | Type | Overall status |
 | --- | --- |
-| A – Core functions | All 20 requirements implemented. A15 uses exact-match product ID lookup via a `byID:{id}` search syntax rather than substring matching, which is a minor adaptation. |
-| B – Multiple photos and order processing | 3 of 4 requirements fully implemented. B4 (separate dates per status change) is partially implemented; a general last-updated timestamp is recorded instead of individual dates for each transition. |
-| F – Multiple vendors | 5 of 5 requirements implemented. F1 is adapted slightly: shop photos are managed through the store management interface after registration rather than being collected on the initial registration form. |
-| T – User generated content | Implemented. Customers can rate and review purchased products and upload review media. |
-| U – Wish list and promotional pricing | Implemented. Customers can maintain wishlists, vendors can create promotions, wishlist sale notifications are sent, and search queries and product views are logged for analytics. |
-| X – User experience design | Implemented. The system features responsive layouts, mobile navigation, swipe-friendly galleries, dark mode, notification badges, and accessible interaction labels. |
+| A – Core functions | Basic | All 20 requirements implemented. A15 uses exact-match product ID lookup via a `byID:{id}` search syntax rather than substring matching, which is a minor adaptation. |
+| B – Multiple photos and order processing | Basic | 3 of 4 requirements fully implemented. B4 (separate dates per status change) is partially implemented; a general last-updated timestamp is recorded instead of individual dates for each transition. |
+| F – Multiple vendors | Basic | 5 of 5 requirements implemented. F1 is adapted slightly: shop photos are managed through the store management interface after registration rather than being collected on the initial registration form. |
+| T – User generated content | Further | Implemented. Customers can rate and review purchased products and upload review media. |
+| U – Wish list and promotional pricing | Further | Implemented. Customers can maintain wishlists, vendors can create promotions, wishlist sale notifications are sent, and search queries and product views are logged for analytics. |
+| X – User experience design | Further | Implemented. The system features responsive layouts, mobile navigation, swipe-friendly galleries, dark mode, notification badges, and accessible interaction labels. |
 
-### 3.3.1 Block A – Core Functions
+### 3.3.1 Block A – Core Functions (Basic)
 
 Block A defines the storefront functions used by customers and the administration portal used by vendors. All twenty requirements are implemented. A15 is adapted slightly: the vendor catalogue provides a `byID:{id}` search syntax for product ID lookup using exact match rather than substring matching.
 
@@ -143,7 +148,7 @@ Block A defines the storefront functions used by customers and the administratio
 | A19 | The vendor can list purchase orders sorted newest first, showing P.O. numbers, dates, customer names, totals and status. | Implemented | The vendor order list displays order ID, date, customer name, total amount, and status, sorted by newest first. |
 | A20 | The vendor can click a purchase order to show its detail and line items. | Implemented | The vendor order detail page shows full order information including individual line items and customer details. |
 
-### 3.3.2 Block B – Multiple Photos and Order Processing
+### 3.3.2 Block B – Multiple Photos and Order Processing (Basic)
 
 Block B adds multi-photo product support and an order status workflow. Three of the four requirements are fully implemented. B4 is partially implemented because a single general timestamp is used instead of separate dates for each status transition.
 
@@ -154,7 +159,7 @@ Block B adds multi-photo product support and an order status workflow. Three of 
 | B3 | Customers can filter the list of purchase orders by order status. | Implemented | The customer order list provides a status filter so customers can view only orders with a particular status. |
 | B4 | The system keeps record of the date for some changes of order status and displays them with order detail. | Partially implemented | The system records a general last-updated timestamp (`statusUpdatedDate`) that is shown in the order detail whenever the status has changed from Pending. Separate dedicated date fields for each type of status transition (e.g. shipment date, cancellation date) are not maintained. |
 
-### 3.3.3 Block F – Multiple Vendors
+### 3.3.3 Block F – Multiple Vendors (Basic)
 
 Block F enables a multi-vendor marketplace where each vendor runs a separate shop. All five requirements are implemented. F1 is adapted slightly in that shop photos are uploaded through store management after registration rather than during the initial registration form.
 
@@ -166,9 +171,9 @@ Block F enables a multi-vendor marketplace where each vendor runs a separate sho
 | F4 | Customers can put products from different shops in their cart. A purchase order contains products from one shop only. The system splits items into separate orders per shop. | Implemented | The cart holds items from any store. During checkout, selected items are automatically grouped by store and a separate purchase order is created for each store. |
 | F5 | Items not checked out remain in the shopping cart. | Implemented | Items not selected during checkout remain in the cart for future purchase. |
 
-### 3.3.4 Further Requirement Blocks – T, U, and X
+### 3.3.4 Further Requirement Blocks – T, U, and X (Optional)
 
-The further requirement blocks were selected because they add value beyond the basic transaction flow. Unlike Blocks A, B and F, these blocks do not define individually numbered sub-requirements. They describe broader capabilities whose implementation is summarised below.
+The further requirement blocks are optional additions selected to extend the system beyond the compulsory baseline. They were chosen because they add significant value to a fashion marketplace. Unlike the basic Blocks A, B and F, these blocks do not define individually numbered sub-requirements. They describe broader capabilities whose implementation is summarised below.
 
 **Block T – User Generated Content**
 
