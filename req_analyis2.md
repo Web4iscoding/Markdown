@@ -114,7 +114,7 @@ This section evaluates the chosen specification blocks against the developed sys
 
 | Block | Type | Overall status |
 | --- | --- |
-| A – Core functions | Basic | All 20 requirements implemented. A15 uses exact-match product ID lookup via a `byID:{id}` search syntax rather than substring matching, which is a minor adaptation. |
+| A – Core functions | Basic | All 20 requirements implemented. |
 | B – Multiple photos and order processing | Basic | 3 of 4 requirements fully implemented. B4 (separate dates per status change) is partially implemented; a general last-updated timestamp is recorded instead of individual dates for each transition. |
 | F – Multiple vendors | Basic | 5 of 5 requirements implemented. F1 is adapted slightly: shop photos are managed through the store management interface after registration rather than being collected on the initial registration form. |
 | T – User generated content | Further | Implemented. Customers can rate and review purchased products and upload review media. |
@@ -123,7 +123,7 @@ This section evaluates the chosen specification blocks against the developed sys
 
 ### 3.3.1 Block A – Core Functions (Basic)
 
-Block A defines the storefront functions used by customers and the administration portal used by vendors. All twenty requirements are implemented. A15 is adapted slightly: the vendor catalogue provides a `byID:{id}` search syntax for product ID lookup using exact match rather than substring matching.
+Block A defines the storefront functions used by customers and the administration portal used by vendors. All twenty requirements are implemented.
 
 | ID | Specification requirement | Status | Implementation notes |
 | --- | --- | --- | --- |
@@ -141,7 +141,7 @@ Block A defines the storefront functions used by customers and the administratio
 | A12 | Customers can list purchase orders showing P.O. number, purchase date, total amount and status in reverse chronological order. Clicking an entry shows the order detail. | Implemented | The My Orders page lists orders with order ID, order date, total amount, and status, sorted newest first. Each entry links to the order detail page. |
 | A13 | Order detail shows P.O. number, purchase date, shipping address, total amount and status. For each product: product name, quantity, unit price and subtotal. | Implemented | The customer order detail page displays order ID, order date, shipping address, total amount, and status. Each line item shows the product name, quantity, and unit price. |
 | A14 | The vendor can browse products in the catalogue and search by product name. | Implemented | The vendor catalogue page lists the vendor's own products and supports search filtering. |
-| A15 | A system-generated product ID is shown. The vendor can search by entering a substring of the product ID. | Implemented (adapted) | The catalogue displays the system-generated product ID and provides a `byID:{id}` search syntax for looking up products by their ID. The lookup uses exact match rather than substring matching, but it serves the same practical purpose of letting a vendor locate a specific product by its unique identifier. |
+| A15 | A system-generated product ID is shown. The vendor can search by entering a substring of the product ID. | Implemented | The catalogue displays the system-generated product ID and provides a `byID:{id}` search syntax that supports substring matching. For example, entering `byID:12` will match product IDs 12, 120, 312, and so on. |
 | A16 | The vendor may add a new product with at least product name, price and a thumbnail image. | Implemented | The create-product form accepts product name, price, description, images, category, brand, and stock quantity. |
 | A17 | The vendor can edit product detail information. | Implemented | All product fields can be edited through the vendor catalogue detail page. |
 | A18 | The vendor can disable a product to hide it from customers, and later enable it. | Implemented | The vendor can toggle a product's visibility to hide or show it in the storefront. |
