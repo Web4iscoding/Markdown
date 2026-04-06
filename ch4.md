@@ -100,167 +100,169 @@ The main architectural decisions and their justifications are summarised below.
 
 ### 4.2.1 Overview of the Data Model
 
-The database design is centred on a multi-vendor marketplace. The main entities are users, customers, vendors, stores, products, carts, orders, wishlists, promotions, reviews, notifications, and analytics logs. The design separates business identities cleanly: customers buy products, vendors own stores, stores own products, and orders are created per store during checkout.
+The database is designed around the concept of a multi-vendor marketplace and currently contains eighteen entity tables. At the highest level, the schema distinguishes between three groups of entities: identity and store management (users, customers, vendors, stores), commercial transactions (products, cart items, orders, wishlists, promotions), and engagement and analytics (reviews, notifications, search queries, product views). This separation keeps business roles clear: customers place orders, vendors own stores, stores contain products, and each order is scoped to a single store.
 
 Figure 4.2 should be inserted here to show the entity relationship diagram of the database.
 
 Suggested caption: Figure 4.2. Entity relationship diagram of the Online Shipping System Project database.
 
-The main entities and relationships are as follows:
+The principal entities and their relationships are listed below.
 
-- `User` is the authentication root provided by Django.
-- `Customer` extends `User` with shipping address, phone number, and profile image.
-- `Vendor` extends `User` with contact information and profile image.
-- `Store` is in a one-to-one relationship with `Vendor`, meaning each vendor manages one store in the current design.
-- `StorePhoto` is in a one-to-many relationship with `Store` so each store can have multiple photos.
-- `Product` belongs to one `Store`, one optional `Brand`, and one optional `Category`.
-- `ProductMedia` is in a one-to-many relationship with `Product`, allowing multiple product images.
-- `CartItem` links `Customer` and `Product` and stores quantity.
-- `Order` belongs to one `Customer` and stores shipping and status information.
-- `OrderItem` belongs to one `Order` and one product reference, and stores a snapshot of product name, quantity, and paid price.
-- `WishlistItem` links `Customer` and `Product` and stores price-related information at the time of addition.
-- `Promotion` belongs to one `Product` and stores discount percentage and active dates.
-- `Review` belongs to one `OrderItem`, while `ReviewMedia` stores optional media for the review.
-- `Notification` belongs to one `User` and may also reference an order or product.
-- `SearchQuery` and `ProductView` record behavioural events used for analytics.
+- `User` is the authentication root provided by Django's built-in user model.
+- `Customer` extends `User` through a one-to-one link and adds first name, last name, phone number, three shipping-address fields, and an optional profile image.
+- `Vendor` extends `User` in the same manner and adds first name, last name, phone number, and an optional profile image.
+- `Store` has a one-to-one relationship with `Vendor`, so each vendor manages exactly one store in the current design.
+- `StorePhoto` has a many-to-one relationship with `Store`, allowing a store to display multiple ordered photographs.
+- `Category` and `Brand` are independent reference tables; `Category` names are unique, and `Brand` may carry an optional logo image.
+- `Product` belongs to one `Store` and optionally references one `Brand` and one `Category`. Deleting a brand or category sets the reference to null rather than cascading.
+- `ProductMedia` has a many-to-one relationship with `Product` and supports both image and video media types, each with a sort order and an optional primary flag.
+- `CartItem` is an associative entity linking `Customer` and `Product`, storing the selected quantity.
+- `Order` belongs to one `Customer` and captures shipping details, total amount, fulfilment status, and optional refund information.
+- `OrderItem` belongs to one `Order` and references one `Product`. It stores a snapshot of the product name, quantity, and paid price so that the order record remains meaningful even if the product later changes.
+- `WishlistItem` is an associative entity linking `Customer` and `Product`, recording the original price, discount rate, and effective price at the time of addition.
+- `Promotion` belongs to one `Product` and stores a discount percentage, start and end dates, an active/inactive status flag, and a flag indicating whether a notification has been sent.
+- `Review` has a one-to-one relationship with `OrderItem`, while `ReviewMedia` stores optional image or video attachments for the review.
+- `Notification` belongs to one `User` and may optionally reference an `Order` or a `Product` for contextual linking.
+- `SearchQuery` and `ProductView` are event-log entities that record search strings with result counts and product-detail visits with source attribution, respectively.
 
 ### 4.2.2 Important Modelling Decisions
 
-The data model includes several deliberate design decisions to preserve history, enforce useful constraints, and support future analysis.
+Several deliberate design choices shape the data model. Each one addresses a specific requirement—preserving commercial history, maintaining marketplace rules, accommodating extra relationship attributes, or handling uploaded media.
 
 #### Snapshotting order details
 
-The `OrderItem` entity stores `productName` and `paidPrice` directly instead of depending only on the current `Product` record. This is an important design decision because product names, prices, and promotions may change after purchase. By snapshotting the purchased name and price inside the order item, the system preserves the commercial meaning of a completed transaction.
+`OrderItem` stores the `productName` and `paidPrice` as independent columns rather than relying solely on the current `Product` record. This is necessary because product names, base prices, and promotions can all change after a purchase has been made. By capturing the name and the effective price at the moment of sale, the system preserves an accurate historical record of every completed transaction.
 
 #### Splitting orders by vendor
 
-The specification requires that a purchase order contains products from one shop only. This is supported by the data model and the checkout logic together. The cart can contain items from many stores, but the server groups the cart items by vendor and creates separate `Order` records. Therefore, the database remains consistent with the marketplace rule that each order belongs to a single vendor context.
+The project specification requires that each purchase order contains products from only one shop. The data model and the checkout logic enforce this rule together: a shopping cart may reference products from multiple stores, but the server groups cart items by vendor and creates a separate `Order` for each group. As a result, every `Order` row in the database is associated with a single vendor's store, and the marketplace constraint is satisfied at the data level.
 
-#### Representing many-to-many relationships
+#### Representing many-to-many relationships through associative entities
 
-Several many-to-many business relationships are implemented through associative entities rather than direct many-to-many fields.
+Three conceptually many-to-many relationships are modelled with explicit associative entities rather than Django's built-in `ManyToManyField`.
 
-- Customer-to-product in cart is modelled through `CartItem`.
-- Customer-to-product in wishlist is modelled through `WishlistItem`.
-- Order-to-product is modelled through `OrderItem`.
+- `CartItem` links `Customer` and `Product`, storing the selected quantity.
+- `WishlistItem` links `Customer` and `Product`, storing the original price, discount rate, and effective price at the time of addition.
+- `OrderItem` links `Order` and `Product`, storing the product name snapshot, quantity, and paid price.
 
-This approach is necessary because each relationship stores extra attributes. For example, cart items and order items need quantity, while order items also need the paid price and product snapshot.
+Associative entities are required here because each relationship carries domain-specific attributes that a bare join table could not accommodate.
 
 #### Media storage design
 
-The project stores image file paths in the database and the actual image files in the media directory on the server. This design is used for:
+Uploaded files are stored on the server's local file system, and the database records only the file path. The following entities use Django's `ImageField` for this purpose:
 
-- customer profile images;
-- vendor profile images;
-- store photos;
-- product media;
-- review media.
+- `Customer` — optional profile image;
+- `Vendor` — optional profile image;
+- `Brand` — optional logo image;
+- `StorePhoto` — ordered store photographs;
+- `ProductMedia` — product images or videos;
+- `ReviewMedia` — review images or videos.
 
-The database therefore stores references to files rather than binary blobs. This keeps the relational data model simpler and allows the frontend to load media through URLs.
+Storing references rather than binary blobs keeps the relational schema simpler and allows the frontend to retrieve media directly through URL paths served by Django's media handler.
 
 ### 4.2.3 Integrity Constraints and Business Rules
 
-The model enforces several useful constraints.
+Data integrity is maintained through a combination of database-level constraints and application-level validation. The database enforces the following structural rules.
 
-- `CartItem` uses a unique constraint on customer and product, so the same product cannot appear multiple times as separate cart rows for one customer.
-- `WishlistItem` uses a unique constraint on customer and product, so a customer can only wishlist a product once.
-- `Store` uses a unique combination of vendor and store name.
-- `Review` uses a one-to-one relationship with `OrderItem`, which prevents multiple reviews on the same purchased line item.
+- `CartItem` carries a unique-together constraint on customer and product, preventing duplicate cart rows for the same customer–product pair.
+- `WishlistItem` carries an equivalent unique-together constraint, ensuring a customer can wishlist a given product only once.
+- `Store` enforces a unique combination of vendor and store name, so a vendor cannot create two stores with the same name.
+- `Review` uses a one-to-one relationship with `OrderItem`, making it structurally impossible to attach more than one review to the same purchased line item.
 
-In addition to the database-level constraints, some rules are enforced in application logic.
+Beyond these schema-level constraints, several business rules are enforced in the server-side application logic.
 
-- A customer is prevented from reviewing the same product more than once, even if they bought it multiple times, because the review creation logic checks for an existing review by that customer on that product.
-- A refund request requires a reason and is handled as a separate flag (`refundRequest`) and explanation (`refundReason`) on the order.
-- Promotions are treated as active only when both their status and date range are valid.
+- A customer may not review the same product more than once. Even if the customer purchased the product in multiple separate orders, the review-creation endpoint queries for any existing review by that customer on that product and rejects duplicates.
+- A refund request requires a non-empty reason string. The request is recorded through a boolean flag (`refundRequest`) and a text field (`refundReason`) on the `Order` entity.
+- A promotion is considered active only when its status field is set to `Active` and the current date falls within the promotion's start and end dates.
 
-This mixture of database constraints and server-side validation is appropriate because some rules are structural while others are workflow-dependent.
+This layered approach is appropriate because structural uniqueness is best guaranteed by the database engine, whereas workflow-dependent rules—such as cross-order review deduplication or date-sensitive promotion activation—require logic that goes beyond what declarative constraints can express.
 
 ### 4.2.4 Order Status and Transaction Tracking
 
-The `Order` table tracks the progress of fulfilment through four main statuses:
+Fulfilment progress is tracked through a status field on the `Order` entity with four permitted values:
 
-- `Pending`
-- `Holding`
-- `Shipped`
-- `Cancelled`
+- `Pending` — the initial state assigned at checkout;
+- `Holding` — the vendor has placed the order on hold;
+- `Shipped` — the vendor has dispatched the order;
+- `Cancelled` — the order has been cancelled by either party.
 
-The order record also stores:
+Alongside the status, each order record stores the following transactional data:
 
-- total amount;
-- shipping name, phone number, and address snapshot;
-- cancellation reason;
-- refund request flag and refund reason;
-- a general `statusUpdatedDate` timestamp.
+- total monetary amount;
+- the customer's shipping name (first and last), phone number, and three address lines, captured at the time of checkout;
+- an optional cancellation reason;
+- a refund-request boolean flag and an optional refund-reason text;
+- a `statusUpdatedDate` timestamp that is automatically refreshed whenever the record is saved.
 
-This design is sufficient for the required order processing workflow. It is simple and easy to query for customer and vendor interfaces. The main limitation is that the system records a general status update timestamp rather than dedicated timestamps such as shipped date, cancelled date, or refund date. For the scale of this project, the simpler model is acceptable, but a production design would likely use a separate order-status history table.
+This flat-status design is straightforward to implement and query from both the customer and vendor interfaces. Its main limitation is that only the most recent status change is timestamped; the model does not maintain a full history of transitions. For the scope of this coursework project the trade-off is acceptable, but a production system would benefit from a dedicated order-status-history table that records every transition with its own timestamp and actor.
 
 ### 4.2.5 Imported and Exported Data Formats
 
-The system uses two main data exchange formats.
+Two data-exchange formats are used between the React frontend and the Django backend.
 
-- JSON is used for most API requests and responses between the React frontend and the Django backend.
-- `multipart/form-data` is used when uploading files such as profile images, product images, store photos, and review images.
+- **JSON** is the default format for both requests and responses. Structured payloads such as product listings, order details, and analytics summaries are serialised as JSON.
+- **`multipart/form-data`** is used whenever a request includes file uploads—for example, profile images, product media, store photos, brand logos, and review attachments.
 
-The exported data displayed to users is generated dynamically through API responses rather than through downloadable reports. Vendor analytics are returned as structured JSON objects that the frontend converts into visual charts and summary panels.
+The system does not produce downloadable reports. All data presented to users—including vendor analytics charts and sales summaries—is generated dynamically through API responses and rendered by the frontend.
 
 ## 4.3 Dynamic Modelling
 
 ### 4.3.1 Customer Checkout Activity
 
-The most important dynamic process in the system is the checkout flow. It begins when a customer has added products to the cart and ends when one or more vendor-specific orders have been created.
+The checkout flow is the most important dynamic process in the system. It begins when a customer has placed one or more products in the shopping cart and ends when the server has created one or more vendor-specific orders, deducted stock, and notified the relevant vendors.
 
 Figure 4.3 should be inserted here to show the activity diagram for the customer checkout workflow.
 
 Suggested caption: Figure 4.3. Activity diagram of the customer checkout and split-order workflow.
 
-The typical sequence is as follows:
+The sequence proceeds as follows.
 
 1. The customer browses products and adds selected items to the shopping cart.
-2. The customer opens the cart and chooses which items to check out.
-3. The frontend sends the selected product IDs and shipping details to the backend.
-4. The backend validates the customer identity and shipping data.
-5. The backend groups the chosen cart items by vendor.
-6. For each vendor group, the backend creates one order and multiple order items.
-7. For each order item, the backend calculates the effective paid price, applying any active promotion.
-8. The backend reduces the available product quantity.
-9. The backend calculates the total order amount and saves the order.
-10. The checked-out cart items are removed from the cart.
-11. A notification is created for each vendor who received a new order.
-12. The frontend shows the successful purchase result to the customer.
+2. The customer opens the cart, selects the items to purchase, and enters or confirms shipping details.
+3. The frontend sends the selected product IDs together with the shipping name, phone number, and address fields to the backend.
+4. The backend validates the customer identity and verifies that the shipping address fields are present.
+5. The backend groups the selected cart items by the vendor who owns each product's store.
+6. For each vendor group the backend creates a new `Order` record along with one `OrderItem` per product.
+7. For each order item the backend checks whether an active promotion exists for the product and, if so, applies the discount percentage to compute the paid price; otherwise the full product price is used.
+8. The backend decrements the product's stock quantity by the ordered amount.
+9. The backend sums the line-item totals, stores the result as the order's total amount, and saves the order.
+10. All checked-out cart items are deleted from the cart.
+11. A `new_order` notification is created for each vendor who received an order.
+12. The backend returns the list of created orders to the frontend, which displays the purchase confirmation to the customer.
 
-This process is a good example of why checkout logic belongs on the server side. If grouping by vendor, price calculation, stock deduction, and notification creation were performed only in the client, data consistency would be much harder to guarantee.
+This sequence illustrates why checkout logic must reside on the server: vendor grouping, price calculation, stock deduction, and notification creation all depend on authoritative data and must execute as a single consistent operation. Performing these steps in the client would expose the system to race conditions and data inconsistency.
 
-The auxiliary path occurs when the customer checks out only part of the cart. In that case, only the selected items are converted into orders, while the rest remain in the cart. This directly implements the split-order requirement.
+An important variant occurs when the customer selects only a subset of the cart for checkout. In that case the frontend passes an explicit list of product IDs, and only the matching cart items are processed; the remaining items stay in the cart for a future purchase. This partial-checkout path directly satisfies the split-order requirement defined in the specification.
 
 ### 4.3.2 Order State Changes
 
-The order lifecycle is controlled through explicit status changes.
+After an order is created in the `Pending` state, its lifecycle is governed by status updates issued through two separate endpoints: one for vendors and one for customers.
 
 Figure 4.4 should be inserted here to show the order state diagram.
 
 Suggested caption: Figure 4.4. State diagram for purchase order processing.
 
-The main permissible transitions are:
+**Vendor-initiated transitions.** The vendor can set a new status for any order that contains items from the vendor's store. The backend accepts four status values—`Pending`, `Holding`, `Shipped`, and `Cancelled`—and does not enforce guards on the previous state, so the vendor bears responsibility for following the intended progression. The expected workflow is:
 
-- checkout creates a new order in `Pending`;
-- the vendor may change `Pending` to `Holding`;
-- the vendor may change `Pending` to `Shipped`;
-- the vendor may change `Pending` to `Cancelled`;
-- the vendor may change `Holding` to `Shipped` after resolving issues;
-- the vendor may change `Holding` to `Cancelled`;
-- the customer may cancel an order before shipment, which also moves the order to `Cancelled`.
+- `Pending` → `Holding`, when the vendor needs to pause fulfilment;
+- `Pending` → `Shipped`, for straightforward dispatch;
+- `Pending` → `Cancelled`, when the vendor cannot fulfil the order (a reason is required);
+- `Holding` → `Shipped`, once the issue has been resolved;
+- `Holding` → `Cancelled`, if the issue cannot be resolved.
 
-Whenever the vendor changes the order state to `Holding`, `Shipped`, or `Cancelled`, the system creates a notification for the customer. This ensures that the dynamic model is not limited to database state alone; the system also reacts by informing the user.
+Whenever the vendor sets the status to `Holding`, `Shipped`, or `Cancelled`, the backend creates a notification for the customer indicating the change.
 
-The refund process is modelled as a side process rather than a separate top-level state. A customer may request a refund for a pending or held order by setting the refund request flag and storing a reason. The vendor can then approve or reject that request. This design is simpler than adding more main order states, although a more advanced implementation could model refund handling as a dedicated state machine.
+**Customer-initiated cancellation.** The customer can cancel any of their own orders through a dedicated cancellation endpoint. The current implementation does not restrict cancellation by order status, so the customer can submit a cancellation request regardless of whether the order is pending, on hold, or already shipped. A cancellation reason is stored alongside the status change. Unlike vendor-initiated status changes, customer cancellation does not automatically generate a notification for the vendor.
+
+**Refund side-process.** Rather than introducing additional top-level states, refund handling is modelled as a flag on the order. A customer may request a refund for an order whose status is `Pending` or `Holding` by providing a reason; the backend then sets the `refundRequest` flag and stores the reason text. The vendor can subsequently approve or reject the request, and a corresponding notification is sent to the customer in either case. This design keeps the primary state machine simple, although a more advanced implementation could model refund handling as a dedicated state machine with its own transitions.
 
 ### 4.3.3 Review and Promotion Interaction
 
-Another important dynamic aspect of the system involves post-purchase feedback and promotional engagement.
+Two additional event-driven flows extend the system beyond basic order processing: post-purchase reviewing and promotion-triggered wishlist notifications.
 
-After a product has been purchased and delivered, the product detail endpoint checks whether the authenticated customer has bought the product in a shipped order and whether that customer has already reviewed it. If the product is eligible for review, the frontend allows the customer to submit one review with optional media. This creates a controlled feedback loop that supports trust without allowing unlimited duplicate reviews.
+**Review eligibility.** When an authenticated customer views a product detail page, the backend determines whether that customer has received the product in a shipped order and whether the customer has already submitted a review for that product. If both conditions are met—a shipped purchase exists and no prior review is found—the response includes the eligible order-item identifier, and the frontend enables the review form. The customer may then submit a single review with an optional set of media attachments. This mechanism creates a controlled feedback loop: reviews are tied to verified purchases, and each customer can review a given product only once regardless of how many times it was ordered.
 
-Promotions trigger another dynamic flow. When a vendor creates an active promotion for a product, the server checks whether that product appears in any customers' wishlists. If it does, the backend creates notifications for those customers to inform them that the item is on sale. This interaction links together product pricing, wishlists, and notifications in one event-driven behaviour.
+**Promotion and wishlist notification.** When a vendor creates a promotion whose date range makes it immediately active, the backend queries the `WishlistItem` table for all customers who have wishlisted the promoted product. For each match it creates a `wishlist_sale` notification informing the customer that the item is now discounted. If the promotion is created with a future start date and is therefore inactive at the time of creation, no notifications are sent at that point; notifications are issued only when the promotion is active at the moment it is saved. This interaction links product pricing, wishlists, and the notification system in a single event-driven behaviour.
 
 Figure 4.5 should be inserted here to show a sequence diagram for promotion-triggered wishlist notifications.
 
@@ -268,19 +270,19 @@ Suggested caption: Figure 4.5. Sequence diagram for creating a promotion and not
 
 ### 4.3.4 Notification Behaviour
 
-Notifications are generated when specific events occur, rather than by continuous background messaging. This helps avoid unnecessary noise while still supporting user awareness.
+Notifications are generated in response to discrete events rather than through continuous background messaging. This event-driven design avoids unnecessary noise while keeping both customers and vendors informed of important state changes.
 
-The current notification events include:
+The system currently recognises the following notification events:
 
-- new order received by a vendor;
-- refund request sent to a vendor;
-- wishlist item placed on sale for a customer;
-- order shipped for a customer;
-- order put on hold for a customer;
-- order cancelled for a customer;
-- refund approved or rejected for a customer.
+- **new order** — sent to the vendor when a customer completes checkout;
+- **refund request** — sent to the vendor when a customer requests a refund;
+- **wishlist sale** — sent to a customer when a wishlisted product receives an active promotion;
+- **order shipped** — sent to a customer when the vendor marks the order as shipped;
+- **order on hold** — sent to a customer when the vendor places the order on hold;
+- **order cancelled** — sent to a customer when the vendor cancels the order;
+- **refund approved** or **refund rejected** — sent to a customer after the vendor responds to a refund request.
 
-The frontend periodically polls the unread notification count and displays it as a badge in the navigation bar. When the user opens the notification panel, notifications can be marked as read and linked directly to the related product or order screen. This design balances simplicity and usability without introducing the complexity of WebSocket-based real-time messaging.
+On the frontend, the navigation component polls the server for the unread-notification count every thirty seconds and renders the result as a badge on the notification icon. When the user opens the notification panel, individual notifications can be marked as read; each notification may also carry a deep link to the related order or product screen. This polling-based approach balances responsiveness and simplicity without introducing the infrastructure overhead of WebSocket-based real-time messaging.
 
 ## 4.4 Mobile UX Design and Client-Server Interaction
 
