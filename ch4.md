@@ -1,101 +1,100 @@
 # Chapter 4: System Design
 
-This chapter presents the system design of the Online Shipping System Project and explains how the implementation satisfies the requirements analysed in Chapter 3. The discussion starts with the high-level architecture of the complete system, then moves into the underlying data model and the dynamic behaviour of key business processes such as checkout, order processing, and notifications. The later sections focus on design areas that are especially important for this project, namely mobile-friendly user experience, client-server communication, security and data management, and vendor-facing analytics and recommendations. Together, these sections describe one coherent marketplace system in which a React storefront and administration portal interact with a Django REST backend and a relational database to support customers, vendors, products, orders, promotions, and user engagement features.
+This chapter describes the design of the Online Shipping System and shows how the implemented system satisfies the requirements established in Chapter 3. Section 4.1 presents the high-level architecture, explains the separation between the browser-based frontend and the server-side backend, and justifies the choice of development tools. Section 4.2 defines the data model, covering entity relationships, integrity constraints, and media storage. Section 4.3 addresses dynamic modelling, focusing on the checkout workflow, the order-status lifecycle, and the notification mechanism. The remaining sections discuss mobile-oriented UX design (Section 4.4), security and data management (Section 4.5), and vendor analytics with product-discount recommendations (Section 4.6). Taken together, these sections form a single coherent design in which a React single-page application communicates with a Django REST API backed by a relational database to deliver the multi-vendor fashion marketplace required by the project specification.
 
 ## 4.1 Architectural Design
 
 ### 4.1.1 Overall System Architecture
 
-The project follows a three-tier web application architecture consisting of a presentation layer, an application layer, and a data layer.
+The system follows a three-tier web application architecture comprising a presentation layer, an application layer, and a data layer.
 
-- The presentation layer is implemented as a React single-page application (SPA) built with Vite.
-- The application layer is implemented with Django and Django REST Framework (DRF), which expose REST-style API endpoints for authentication, products, carts, orders, wishlists, promotions, reviews, analytics, and notifications.
-- The data layer is implemented with SQLite for structured application data and the local media directory for uploaded images such as customer profile images, vendor profile images, store photos, product media, and review media.
+- **Presentation layer.** A React single-page application (SPA), built and served with Vite, provides the user interface for both customers and vendors within the same browser-based client.
+- **Application layer.** A Django server together with Django REST Framework (DRF) exposes RESTful API endpoints that handle authentication, product catalogues, shopping carts, orders, wishlists, promotions, reviews, analytics, and notifications.
+- **Data layer.** SQLite stores all structured application data, while the server's local media directory holds uploaded files such as profile images, store photos, product images, and review images.
 
-The architectural separation is suitable for this project because the customer storefront and vendor administration portal share the same backend business logic but require different user interfaces. By exposing business functions through Web APIs, the system keeps the frontend flexible while centralising validation, authentication, order processing, and data access on the server side.
+This separation is well suited to the project because the customer storefront and the vendor management interface share the same business logic yet present different views to the user. Exposing all business functions through a Web API keeps the frontend flexible while centralising validation, security, and data access on the server.
 
 Figure 4.1 should be inserted here to show the overall architecture of the system.
 
 Suggested caption: Figure 4.1. High-level architecture of the Online Shipping System Project.
 
-At runtime, the interaction is as follows:
+At runtime the layers interact as follows:
 
-1. A customer or vendor uses the browser-based React client.
-2. The React client sends HTTP requests to the Django backend through the API layer.
-3. The backend authenticates the request, validates the data, executes business rules, and reads or updates the database.
-4. When media files are involved, Django stores them in the server-side media folder and returns the media URLs to the frontend.
-5. The frontend renders the returned JSON data into catalogue pages, product pages, carts, order screens, vendor dashboards, and notification interfaces.
+1. A customer or vendor opens the React client in a web browser.
+2. The client issues HTTP requests carrying JSON payloads (or multipart form data for file uploads) to the Django API.
+3. The backend authenticates the request, validates the input, executes the relevant business rules, and reads from or writes to the database.
+4. For media uploads, Django saves the file to the server-side media directory and returns the resulting URL.
+5. The client renders the JSON response into product catalogues, order screens, vendor dashboards, notification panels, and other interface views.
 
-No stored procedures are used in the database. All business logic is implemented in the Django application layer, especially in serializers and API views. This design keeps the logic in one place and reduces coupling between the database engine and the application behaviour.
+All business logic resides in the Django application layer—specifically in serializers and view sets—rather than in database stored procedures. This keeps the logic in a single codebase and avoids coupling it to a particular database engine.
 
 ### 4.1.2 Client-Side Design
 
-The frontend is implemented in React 19 with React Router for route-based navigation. Although the application is delivered through a browser, it behaves like a client application because page transitions such as product browsing, viewing product detail, opening the cart, checking order history, or switching to vendor screens are handled on the client side without full page reloads.
+The frontend is built with React 19 and uses React Router 7 for client-side routing. Because navigation between pages—such as moving from a product list to product detail, opening the cart, or switching to the vendor dashboard—is handled entirely in the browser, the application behaves as a single-page application with no full-page reloads.
 
-The React frontend contains both public and authenticated routes. Public routes support browsing products, stores, categories, brands, reviews, and the contact page. Authenticated routes provide customer functions such as cart, checkout, wishlist, profile management, review submission, and order history, as well as vendor functions such as product catalogue management, store management, order management, discounts, and analytics.
+Routes are divided into two groups. Public routes allow unauthenticated visitors to browse the product catalogue, view store pages, explore categories and brands, read reviews, and access the contact page. Authenticated routes give customers access to cart, checkout, wishlist, order history, profile management, and review submission, while vendors can manage their product catalogue, store information, orders, promotions, and analytics.
 
-This design has several benefits:
+This client-side architecture offers several advantages:
 
-- it provides a smoother browsing experience for catalogue-style interaction;
-- it allows the same API to serve both customer and vendor interfaces;
-- it supports responsive and mobile-specific UI behaviour more easily than server-rendered page transitions;
-- it keeps the user interface logic separate from business rules.
+- smoother navigation during catalogue browsing, where users frequently move between list and detail views;
+- a single API backend serving both the customer and vendor interfaces without duplication;
+- easier implementation of responsive and mobile-specific behaviours compared with traditional server-rendered pages;
+- clear separation between user-interface concerns and server-side business logic.
 
 ### 4.1.3 Server-Side Design
 
-The backend is implemented with Django 5.2 and Django REST Framework 3.16. The API is organised around resource-oriented view sets and API views. Important backend modules include the following:
+The backend runs on Django 5.2 with Django REST Framework 3.16. Its API is organised around resource-oriented ViewSets and APIViews, grouped into the following functional areas:
 
-- authentication views for customer registration, vendor registration, login, logout, profile updates, and password changes;
-- product, brand, category, and store endpoints for catalogue browsing;
-- cart and order endpoints for the customer purchase flow;
-- vendor-specific endpoints for order processing, product management, promotions, and analytics;
-- review and wishlist endpoints for engagement features;
-- notification endpoints for user updates.
+- **Authentication** — customer and vendor registration, login, logout, profile updates, and password changes.
+- **Catalogue** — product listing, product detail, brand, category, and store endpoints.
+- **Shopping** — cart management and order creation for customers.
+- **Vendor operations** — order processing, product management, promotion management, and analytics.
+- **Engagement** — review submission, wishlist management, and notification delivery.
 
-The server applies most business rules centrally. Examples include:
+Critical business rules are enforced entirely on the server. Key examples are:
 
-- splitting cart items into separate orders by vendor during checkout;
-- applying active promotions when calculating the paid price of an order item;
-- reducing stock quantity when an order is created;
-- enforcing ownership rules so a vendor can only manage products and orders belonging to that vendor's store;
-- creating notifications when significant events occur, such as new orders, order status changes, refund requests, and wishlist sale events.
+- grouping cart items by vendor and creating a separate order for each vendor during checkout;
+- applying active promotions to compute the paid price of every order item;
+- decrementing product stock quantities when an order is confirmed;
+- restricting each vendor's access to only the products and orders that belong to that vendor's store;
+- generating notifications automatically on events such as new orders, status changes, refund requests, and wishlist-item sales.
 
-This backend-centred design is appropriate because order processing and data integrity should not depend on client-side behaviour alone.
+Centralising these rules on the backend is essential because order correctness and data integrity must not depend on the behaviour of the client.
 
 ### 4.1.4 Development Tools and Environment
+
+Table 4.1 summarises the principal technologies used across the three tiers. Each entry includes the role the technology plays and the rationale behind its selection.
 
 Table 4.1 should be inserted here to summarise the development tools and environment.
 
 Suggested caption: Table 4.1. Main technologies used in the Online Shipping System Project.
 
-The main technologies used in the project are summarised below.
-
-| Layer | Technology | Role in the system | Reason for selection |
+| Layer | Technology | Role | Rationale |
 | --- | --- | --- | --- |
-| Frontend | React 19 | Component-based user interface | Suitable for reusable UI components, client-side routing, and responsive interactive pages |
-| Frontend build tool | Vite 7 | Development server and bundler | Fast startup and simple development workflow |
-| Frontend UI libraries | Material UI, MUI X Charts, custom CSS | Navigation, layout helpers, analytics charts, visual components | Accelerates UI development while allowing custom styling |
-| Backend | Django 5.2 | Web framework and application backbone | Mature framework with authentication, ORM, media support, and admin tools |
-| Web API | Django REST Framework 3.16 | JSON API layer | Clean serializer and view set model for SPA-to-server communication |
-| Authentication | Custom DeviceToken authentication | Multi-device token login | Supports separate tokens per device or browser session |
-| Database | SQLite | Persistent relational data storage | Simple setup and suitable for coursework-scale deployment |
-| Media processing | Pillow | Image handling for uploads | Standard support for Django image fields |
+| Frontend framework | React 19 | Component-based user interface | Supports reusable components, client-side routing, and responsive interactive pages |
+| Build tool | Vite 7 | Development server and production bundler | Provides fast cold starts and a simple configuration-light workflow |
+| UI libraries | Material UI 7, MUI X Charts 8, custom CSS | Accordion menus, layout helpers, analytics charts, and project-specific styling | Balances ready-made components with the freedom to apply custom visual design |
+| Backend framework | Django 5.2 | Web framework, ORM, and application backbone | Mature ecosystem with built-in authentication, media handling, and an admin interface |
+| API framework | Django REST Framework 3.16 | JSON-based RESTful API layer | Serializer and ViewSet abstractions map cleanly to SPA-to-server communication |
+| Authentication | Custom DeviceToken mechanism | Per-device token management | Allows multiple simultaneous sessions so that logging out on one device does not affect others |
+| Database | SQLite | Persistent relational data store | Zero-configuration setup suited to coursework-scale development and testing |
+| Image processing | Pillow 12 | Server-side image handling for uploaded media | Standard library required by Django's `ImageField` |
 
-The use of SQLite is reasonable for this project because the application is intended as a development and demonstration system rather than a high-concurrency production marketplace. SQLite reduces deployment complexity and makes setup simpler for development and testing. However, the data model is relational and portable, so the design could be migrated to a production-grade database such as PostgreSQL with relatively limited structural change.
+SQLite was chosen because the application is a development and demonstration system rather than a high-concurrency production marketplace. It eliminates the need for a separate database server and simplifies local setup. Because the data model is fully relational, migration to a production-grade engine such as PostgreSQL would require only a configuration change rather than a schema redesign.
 
-Uploaded media files are managed through Django ImageField definitions and stored under the backend media directory. This choice is practical for development because it avoids introducing cloud storage complexity too early. The trade-off is that local file storage is not ideal for distributed or large-scale deployment, so an object storage service would be preferable in a production environment.
+Uploaded media files (profile pictures, store banners, product images, and review photos) are stored on the server's local file system via Django's `ImageField`. This approach avoids the complexity of an external object-storage service during development; however, in a production deployment the media directory should be replaced by durable cloud storage to ensure scalability and redundancy.
 
 ### 4.1.5 Architectural Rationale
 
-Several technical choices were made for clear design reasons.
+The main architectural decisions and their justifications are summarised below.
 
-First, the project uses a decoupled frontend and backend instead of server-rendered templates. This is justified because the system serves two quite different experiences: a customer-facing shopping interface and a vendor-facing administration interface. A shared API makes it easier to support both roles consistently.
+**Decoupled frontend and backend.** Server-rendered templates were rejected in favour of a standalone SPA communicating through a REST API. This decision is justified by the fact that the system serves two distinct user experiences—a customer-oriented storefront and a vendor-oriented management interface—that share the same backend logic. A shared API ensures consistency across both interfaces while keeping each free to evolve its own navigation and layout.
 
-Second, a token-based authentication mechanism was chosen over session-only authentication for the main client-server interaction. The custom DeviceToken model allows each login session to create a separate token, which means logging out on one device does not automatically invalidate all other devices. This is especially useful when customers or vendors access the system from more than one browser or device.
+**Per-device token authentication.** A custom `DeviceToken` model was chosen over traditional session-based authentication. Each login creates an independent token, so signing out on one browser does not invalidate sessions on other devices. This is a practical benefit for users who access the marketplace from multiple devices.
 
-Third, the backend exposes paginated product data. This design decision improves performance and user experience for long catalogues and aligns with the requirement that customers should have practical controls for browsing large product lists.
+**Server-side pagination.** Product listings are returned in pages of eight items. Pagination reduces the volume of data transferred per request and directly supports the specification requirement that customers should have suitable controls for navigating large product lists.
 
-Fourth, the architecture keeps analytics, discount recommendation logic, and notification generation on the server side. These processes depend on reliable event histories such as product views, search terms, wishlist records, order items, and cart additions, which are more trustworthy when captured and processed centrally.
+**Centralised analytics and notification logic.** Behavioural data—product views, search queries, wishlist additions, and cart events—are recorded and processed on the server. Keeping these computations server-side ensures that analytics reports and discount recommendations are derived from a complete and trustworthy event history rather than from client-reported data alone.
 
 ## 4.2 Data Modelling
 
