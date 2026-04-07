@@ -207,82 +207,83 @@ The system does not produce downloadable reports. All data presented to users—
 
 ## 4.3 Dynamic Modelling
 
-### 4.3.1 Customer Checkout Activity
+This section describes the behavioural aspects of the system using three complementary diagrams: a vendor activity flow, a customer activity flow, and a UML state diagram for order processing. Together these diagrams capture the primary interactions each actor performs and the lifecycle of the central Order entity.
 
-The checkout flow is the most important dynamic process in the system. It begins when a customer has placed one or more products in the shopping cart and ends when the server has created one or more vendor-specific orders, deducted stock, and notified the relevant vendors.
+### 4.3.1 Vendor Activity Flow
 
-Figure 4.3 should be inserted here to show the activity diagram for the customer checkout workflow.
+Figure 4.3 illustrates the complete activity flow available to a vendor user from authentication through to logout.
 
-Suggested caption: Figure 4.3. Activity diagram of the customer checkout and split-order workflow.
+![Vendor Activity Diagram](images/vendor_activity_diagram.png)
 
-The sequence proceeds as follows.
+*Figure 4.3. Activity diagram for the vendor user flow.*
 
-1. The customer browses products and adds selected items to the shopping cart.
-2. The customer opens the cart, selects the items to purchase, and enters or confirms shipping details.
-3. The frontend sends the selected product IDs together with the shipping name, phone number, and address fields to the backend.
-4. The backend validates the customer identity and verifies that the shipping address fields are present.
-5. The backend groups the selected cart items by the vendor who owns each product's store.
-6. For each vendor group the backend creates a new `Order` record along with one `OrderItem` per product.
-7. For each order item the backend checks whether an active promotion exists for the product and, if so, applies the discount percentage to compute the paid price; otherwise the full product price is used.
-8. The backend decrements the product's stock quantity by the ordered amount.
-9. The backend sums the line-item totals, stores the result as the order's total amount, and saves the order.
-10. All checked-out cart items are deleted from the cart.
-11. A `new_order` notification is created for each vendor who received an order.
-12. The backend returns the list of created orders to the frontend, which displays the purchase confirmation to the customer.
+**Authentication.** The flow begins at the login or sign-up decision point. A returning vendor enters existing credentials, while a new vendor creates an account by providing personal and store details. Both paths converge once the session token is issued and the vendor reaches the authenticated state.
 
-This sequence illustrates why checkout logic must reside on the server: vendor grouping, price calculation, stock deduction, and notification creation all depend on authoritative data and must execute as a single consistent operation. Performing these steps in the client would expose the system to race conditions and data inconsistency.
+**Home page browsing.** After authentication, the vendor may navigate to the public home page and interact with the catalogue in the same way any visitor would—searching for products, viewing individual item details and their reviews, and visiting other vendor store pages.
 
-An important variant occurs when the customer selects only a subset of the cart for checkout. In that case the frontend passes an explicit list of product IDs, and only the matching cart items are processed; the remaining items stay in the cart for a future purchase. This partial-checkout path directly satisfies the split-order requirement defined in the specification.
+**Profile and management.** Alternatively, the vendor may open the profile area, which serves as the primary management interface. From here the vendor can perform the following activities:
 
-### 4.3.2 Order State Changes
+- **Product list** — search, add, edit, or delete products owned by the vendor's store.
+- **Discount list** — view all promotions the vendor has created for their products.
+- **Order list** — browse incoming orders, update an order's status (Pending, Holding, Shipped, or Cancelled), and create a new discount for a product directly from order context.
+- **Shipped order list** — view orders whose items have been dispatched.
+- **User information** — update personal account details such as name, email, or password.
+- **Store information** — update the store name, description, and store photos.
+- **Analytics** — review product-level performance metrics (views, searches, sales figures) and create discounts based on analytic insights.
 
-After an order is created in the `Pending` state, its lifecycle is governed by status updates issued through two separate endpoints: one for vendors and one for customers.
+Each of these branches is self-contained: the vendor completes the action, returns to the profile hub, and may either begin another management task or proceed to log out, which terminates the session.
 
-Figure 4.4 should be inserted here to show the order state diagram.
+### 4.3.2 Customer Activity Flow
 
-Suggested caption: Figure 4.4. State diagram for purchase order processing.
+Figure 4.4 presents the customer activity flow, covering product discovery, purchasing, and post-purchase actions.
 
-**Vendor-initiated transitions.** The vendor can set a new status for any order that contains items from the vendor's store. The backend accepts four status values—`Pending`, `Holding`, `Shipped`, and `Cancelled`—and does not enforce guards on the previous state, so the vendor bears responsibility for following the intended progression. The expected workflow is:
+![Customer Activity Diagram](images/customer_activity_diagram.png)
 
-- `Pending` → `Holding`, when the vendor needs to pause fulfilment;
-- `Pending` → `Shipped`, for straightforward dispatch;
-- `Pending` → `Cancelled`, when the vendor cannot fulfil the order (a reason is required);
-- `Holding` → `Shipped`, once the issue has been resolved;
-- `Holding` → `Cancelled`, if the issue cannot be resolved.
+*Figure 4.4. Activity diagram for the customer user flow.*
 
-Whenever the vendor sets the status to `Holding`, `Shipped`, or `Cancelled`, the backend creates a notification for the customer indicating the change.
+**Authentication.** As with the vendor flow, the customer either logs in with existing credentials or creates a new account. Authentication yields a device-bound token that persists for subsequent requests.
 
-**Customer-initiated cancellation.** The customer can cancel any of their own orders through a dedicated cancellation endpoint. The current implementation does not restrict cancellation by order status, so the customer can submit a cancellation request regardless of whether the order is pending, on hold, or already shipped. A cancellation reason is stored alongside the status change. Unlike vendor-initiated status changes, customer cancellation does not automatically generate a notification for the vendor.
+**Home page and purchasing.** Once authenticated, the customer may browse the home page and engage in the following activities:
 
-**Refund side-process.** Rather than introducing additional top-level states, refund handling is modelled as a flag on the order. A customer may request a refund for an order whose status is `Pending` or `Holding` by providing a reason; the backend then sets the `refundRequest` flag and stores the reason text. The vendor can subsequently approve or reject the request, and a corresponding notification is sent to the customer in either case. This design keeps the primary state machine simple, although a more advanced implementation could model refund handling as a dedicated state machine with its own transitions.
+- **Search for products** — enter keywords that the backend matches against product names.
+- **View item** — open a product detail page showing price, stock, media gallery, and reviews.
+- **View reviews** — read reviews from other verified purchasers.
+- **View vendor page** — visit a vendor's store profile and browse their full product catalogue.
+- **Buy decision** — when the customer decides to purchase, the flow branches into adding the item to the wishlist for later or adding it to the shopping cart for immediate checkout.
 
-### 4.3.3 Review and Promotion Interaction
+If the customer adds items to the cart, the flow continues through the checkout sequence: the customer views the cart, enters or confirms the shipping address, and submits the order. On the server side, the selected cart items are grouped by vendor, one Order record is created per vendor group with the applicable promotion prices, stock is decremented, checked-out items are removed from the cart, and each affected vendor receives a new-order notification. The frontend then displays a purchase confirmation.
 
-Two additional event-driven flows extend the system beyond basic order processing: post-purchase reviewing and promotion-triggered wishlist notifications.
+**Profile and post-purchase.** From the profile area the customer can review all orders and open any specific order. Two decision points govern subsequent actions:
 
-**Review eligibility.** When an authenticated customer views a product detail page, the backend determines whether that customer has received the product in a shipped order and whether the customer has already submitted a review for that product. If both conditions are met—a shipped purchase exists and no prior review is found—the response includes the eligible order-item identifier, and the frontend enables the review form. The customer may then submit a single review with an optional set of media attachments. This mechanism creates a controlled feedback loop: reviews are tied to verified purchases, and each customer can review a given product only once regardless of how many times it was ordered.
+- **Is the order Pending or Holding?** — If yes, the customer may submit a refund request with a reason. The backend flags the order and stores the reason; the vendor is notified and can approve or reject the request, with the outcome communicated back to the customer through a notification.
+- **Is the order Completed (Shipped)?** — If yes, the customer may rate and review the product. The backend verifies a shipped purchase exists and that the customer has not already reviewed the product before enabling the review form. The customer can submit a rating together with optional media attachments.
 
-**Promotion and wishlist notification.** When a vendor creates a promotion whose date range makes it immediately active, the backend queries the `WishlistItem` table for all customers who have wishlisted the promoted product. For each match it creates a `wishlist_sale` notification informing the customer that the item is now discounted. If the promotion is created with a future start date and is therefore inactive at the time of creation, no notifications are sent at that point; notifications are issued only when the promotion is active at the moment it is saved. This interaction links product pricing, wishlists, and the notification system in a single event-driven behaviour.
+After completing any profile action the customer returns to the profile hub and may eventually log out to end the session.
 
-Figure 4.5 should be inserted here to show a sequence diagram for promotion-triggered wishlist notifications.
+### 4.3.3 Order State Diagram
 
-Suggested caption: Figure 4.5. Sequence diagram for creating a promotion and notifying interested customers.
+Figure 4.5 presents the UML state diagram that governs the lifecycle of every Order entity created by the checkout process.
 
-### 4.3.4 Notification Behaviour
+![Order State Diagram](images/order_state_diagram.png)
 
-Notifications are generated in response to discrete events rather than through continuous background messaging. This event-driven design avoids unnecessary noise while keeping both customers and vendors informed of important state changes.
+*Figure 4.5. UML state diagram for purchase order processing.*
 
-The system currently recognises the following notification events:
+**Initial state.** When a customer places an order through the checkout flow, the system creates the Order record in the **Order Pending** state.
 
-- **new order** — sent to the vendor when a customer completes checkout;
-- **refund request** — sent to the vendor when a customer requests a refund;
-- **wishlist sale** — sent to a customer when a wishlisted product receives an active promotion;
-- **order shipped** — sent to a customer when the vendor marks the order as shipped;
-- **order on hold** — sent to a customer when the vendor places the order on hold;
-- **order cancelled** — sent to a customer when the vendor cancels the order;
-- **refund approved** or **refund rejected** — sent to a customer after the vendor responds to a refund request.
+**Transitions from Order Pending.** Three transitions are possible from this state:
 
-On the frontend, the navigation component polls the server for the unread-notification count every thirty seconds and renders the result as a badge on the notification icon. When the user opens the notification panel, individual notifications can be marked as read; each notification may also carry a deep link to the related order or product screen. This polling-based approach balances responsiveness and simplicity without introducing the infrastructure overhead of WebSocket-based real-time messaging.
+- **Vendor ships items → Items Shipped.** The vendor marks the order as shipped once the items have been dispatched. A notification is sent to the customer.
+- **Vendor labels order not ready to be shipped → Order Holding.** The vendor places the order on hold when fulfilment cannot proceed immediately, for example due to stock verification or packaging delays. A notification is sent to the customer.
+- **Customer or vendor cancels order → Order Cancelled.** Either party may cancel the order. The vendor supplies a cancellation reason and the customer receives a notification; the customer may also cancel directly, storing a cancellation reason alongside the status change.
+
+**Transitions from Order Holding.** The holding state acts as a temporary pause from which two exits exist:
+
+- **Vendor ships items → Items Shipped.** Once the blocking issue is resolved, the vendor dispatches the items and the order moves to the shipped state with an accompanying customer notification.
+- **Customer or vendor cancels order → Order Cancelled.** If the issue cannot be resolved, either party may cancel the order.
+
+**Terminal states.** Items Shipped and Order Cancelled are terminal states with no further transitions, as indicated by the final-state markers in the diagram. The backend accepts four status values—Pending, Holding, Shipped, and Cancelled—and does not enforce guards on the previous state, so the actors bear responsibility for following the intended progression shown in the diagram.
+
+**Refund side-process.** Refund handling operates as a flag on the order rather than as an additional top-level state. While an order is in the Pending or Holding state, the customer may request a refund by providing a reason. The backend sets the `refundRequest` flag and stores the reason text. The vendor can subsequently approve or reject the request and a corresponding notification is sent to the customer. This design keeps the primary state machine concise while still supporting the refund workflow.
 
 ## 4.4 Mobile UX Design and Client-Server Interaction
 
