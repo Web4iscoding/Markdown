@@ -1,159 +1,119 @@
 # Chapter 5: Project Outcome
 
-This chapter presents the outcome of the Online Shipping System Project as an implemented multi-vendor fashion marketplace. Its purpose is to show the main non-trivial features of the completed system at a higher level, with emphasis on how the delivered application supports customer shopping, vendor catalogue management, order processing, promotional engagement, and analytics. Rather than repeating every user interaction step, this chapter highlights the major flows and screens that best demonstrate the completed functionality.
+This chapter describes the developed Online Shipping System as an implemented multi-vendor fashion marketplace. It focuses on the major non-trivial features of the delivered application, covering customer shopping, vendor catalogue management, order processing, promotional engagement, and analytics at a higher level than a step-by-step walkthrough. The demonstration video complements this chapter by illustrating each interaction in detail; this written account concentrates on the workflows and screens that are most relevant for assessing the breadth and depth of the implementation.
 
-The implemented system covers the core customer and vendor requirements, together with the selected extensions for multi-vendor order splitting, multiple product media, order-status processing, wishlist-driven promotions, review-based user-generated content, and responsive user experience. Where screenshots are most useful for assessment, their placement is indicated explicitly.
+The delivered system addresses the core customer and vendor requirements alongside extensions for multi-vendor order splitting, multiple product media, order-status processing, wishlist-driven promotions, verified-purchase reviews, and responsive design. Screenshot placement is indicated explicitly at points where visual evidence is most useful.
 
 ## 5.1 Outcome Overview
 
-The finished system consists of a React-based storefront and vendor interface connected to a Django REST backend. Customers and vendors use separate role-specific features while sharing the same underlying product, order, and notification infrastructure.
+The delivered application comprises a React single-page storefront and vendor interface connected to a Django REST backend. Customers and vendors operate through separate role-specific views while relying on a shared product, order, and notification infrastructure.
 
-At a project-outcome level, the system delivers the following major capability groups:
+On the customer side, the system supports registration, login, server-side cart management, product discovery, and order placement. On the vendor side, it provides registration, shop setup, product catalogue maintenance, and order fulfilment. The checkout process splits items from different shops into individual purchase orders automatically, and products can be presented with multiple images and optional video media. Orders progress through a four-state lifecycle covering Pending, Holding, Shipped, and Cancelled states, with a refund-request workflow connecting customers and vendors. Beyond the core transactional features, the system offers wishlist management with promotional pricing and automated sale notifications, verified-purchase reviews with optional media attachments, a vendor analytics dashboard with visual charts and data-driven discount recommendations, and responsive layout patterns adapted for desktop and mobile screens.
 
-- customer registration, login, persistent cart management, product discovery, and order placement;
-- vendor registration, shop creation, product maintenance, and order fulfilment;
-- split checkout for items originating from different shops;
-- multiple product images and optional video media;
-- order tracking through Pending, Holding, Shipped, and Cancelled states;
-- refund-request handling between customers and vendors;
-- wishlist management, promotional pricing, and sale notifications;
-- verified-purchase reviews with optional media attachments;
-- vendor analytics with charts and discount recommendations;
-- responsive interaction patterns for desktop and mobile screens.
-
-The remainder of the chapter is organised around the most significant completed workflows.
+The sections that follow are organised around the most significant completed workflows.
 
 ## 5.2 Customer Storefront and Purchase Flow
 
-The customer-facing side of the application supports the full purchase journey from account creation to order placement. Public users can browse the product catalogue before login, while authenticated customers gain access to cart, wishlist, orders, notifications, and profile functions.
+The customer-facing interface covers the entire purchase journey from account creation through to order placement. Unauthenticated visitors can browse the product catalogue freely, while logged-in customers additionally access the cart, wishlist, order history, notifications, and profile settings.
 
 Figure 5.1 should be inserted here to show the storefront home page and product-list view.
 
-Suggested caption: Figure 5.1. Customer storefront showing searchable product catalogue and navigable product listings.
+Suggested caption: Figure 5.1. Customer storefront with searchable product catalogue and paginated product listings.
 
-The implemented catalogue goes beyond a basic product listing. Customers can:
-
-- browse products in a grid with name, price, and thumbnail image;
-- search products by name;
-- navigate long product lists with pagination;
-- filter product listings by brand, category, store, stock state, and sale status;
-- open a product-detail page containing richer information, multiple media items, and review content.
+The product catalogue offers several discovery mechanisms. Customers can browse products displayed in a grid showing name, price, and thumbnail image, and search for products by name. Pagination controls allow navigation through lengthy product lists, while filter options narrow results by brand, category, store, stock availability, and sale status. Opening an individual product-detail page presents additional information including a multi-image gallery and customer reviews.
 
 Figure 5.2 should be inserted here to show a product-detail page with multiple images and product information.
 
-Suggested caption: Figure 5.2. Product-detail screen with gallery, pricing, description, and review area.
+Suggested caption: Figure 5.2. Product-detail screen displaying image gallery, pricing, description, and review section.
 
-The shopping-cart and checkout process demonstrates one of the main non-trivial project outcomes. Cart data is stored on the server, so it persists across sessions after login. Customers can add products with a default quantity of one, adjust quantities later, remove items, and inspect total order value before checkout.
+The shopping-cart and checkout process is one of the more involved outcomes of the project. Because cart data is persisted on the server, it survives across browser sessions once the customer is logged in. Products are added to the cart with a default quantity of one; customers can subsequently adjust quantities, remove items, and review the total order value before proceeding to checkout.
 
-The checkout implementation goes beyond a single-shop cart. If a customer selects items belonging to different vendors, the backend groups the selected cart items by shop and creates a separate purchase order for each vendor. This means the system satisfies the multi-vendor constraint while still allowing the customer to shop across the whole marketplace in one session. Items not selected for checkout remain in the cart, which also satisfies the partial-checkout requirement.
+Checkout handles the multi-vendor scenario transparently. When the selected cart items belong to more than one shop, the backend groups them by vendor and creates a separate purchase order for each group. The customer can therefore add products from across the marketplace to a single cart and have them split automatically into per-shop orders at checkout. Any items that are not selected for a given checkout remain in the cart for a future purchase.
 
 Figure 5.3 should be inserted here to show the cart and checkout screen with selected items and shipping details.
 
-Suggested caption: Figure 5.3. Shopping-cart and checkout interface used to create one or more vendor-specific purchase orders.
+Suggested caption: Figure 5.3. Shopping-cart and checkout interface producing one or more vendor-specific purchase orders.
 
-This purchase flow is a representative example of the project's depth because it integrates search, cart persistence, product pricing, shipping information capture, stock deduction, order creation, and vendor notification within a single end-to-end transaction.
+This flow ties together product search, cart persistence, promotional pricing, shipping-address capture, stock deduction, order creation, and vendor notification in a single end-to-end transaction, making it a useful measure of the project's overall integration.
 
 ## 5.3 Order Tracking, Status Changes, and After-Sales Features
 
-After checkout, customers can open their order history and inspect detailed order information. Orders are listed in reverse chronological order and display the purchase-order number, purchase date, and current status. Expanding an order reveals its line items, and clicking through to the detail view shows the paid unit price and quantity for each item, the order total, the shipping address, recipient name, vendor store details, and the latest status-update date.
+Once an order has been placed, customers can view their complete order history. The order list is sorted in reverse chronological order and shows the purchase-order number, purchase date, and current status. Expanding an entry reveals the line items at a glance, and opening the full detail view presents the paid unit price and quantity for each item, the order total, the shipping address, the recipient name, the vendor's store details, and the date of the most recent status update.
 
 Figure 5.4 should be inserted here to show the customer order-history screen and a single order-detail screen.
 
 Suggested caption: Figure 5.4. Customer order history and detailed purchase-order view.
 
-The order-processing outcome includes a four-state workflow:
+Order processing follows a four-state lifecycle. An order begins in the Pending state when it is first created. The vendor can move it to Holding when fulfilment must be temporarily paused, or advance it to Shipped once the items have been dispatched. Either the vendor or the customer can set the order to Cancelled. Both parties can see the current status at all times, and customers may filter their order list by status, which is particularly helpful as the number of orders grows.
 
-- `Pending` when the order is first created;
-- `Holding` when a vendor temporarily pauses fulfilment;
-- `Shipped` when the vendor dispatches the order;
-- `Cancelled` when the order is cancelled by the vendor or customer.
+The system supports a refund-request workflow as part of its after-sales handling. While an order remains in Pending or Holding, the customer can submit a refund request accompanied by a written reason. The request is recorded on the order and surfaced to the vendor, who can then approve or reject it. This adds a realistic dispute-resolution step to the order lifecycle.
 
-This status model is visible to both customers and vendors and satisfies the project requirement for basic order processing. Customers can filter their order list by status, which simplifies navigation when the order history grows large.
-
-The implemented after-sales workflow includes refund requests. When an order is still in `Pending` or `Holding`, the customer can submit a refund request with a reason. The request is recorded on the order, surfaced to the vendor, and resolved by vendor action. This gives the project a more realistic transactional workflow than a simple order list.
-
-Another completed after-sales feature is verified-purchase review submission. The system checks whether the customer has previously received the product in a shipped order and whether a review has already been submitted. Only valid purchasers can create one review per product, with optional image or video attachments. This prevents anonymous or duplicate feedback and turns completed orders into useful user-generated content.
+A second after-sales feature is the verified-purchase review system. Before a customer can submit a review, the backend confirms that the customer has received the product in a shipped order and has not already reviewed it. Each customer is limited to one review per product regardless of how many times the product was ordered, and the review may include optional image or video attachments. These constraints ensure that published reviews originate exclusively from verified buyers and that no duplicate entries appear.
 
 Figure 5.5 should be inserted here to show the review submission area and the refund-request interface on an order.
 
-Suggested caption: Figure 5.5. Post-purchase features including refund request and verified-purchase review submission.
+Suggested caption: Figure 5.5. After-sales features: refund-request submission and verified-purchase review form.
 
 ## 5.4 Vendor Shop Management and Order Processing
 
-The vendor side of the application provides a dedicated management workspace scoped to each shop. Vendors register their own accounts, create a shop with profile information and photos, and subsequently manage only the products and orders that belong to that shop.
+Each vendor operates within a dedicated management workspace tied to their own shop. After registering an account, the vendor creates a shop with descriptive information and photographs, and from that point onward manages only the products and orders associated with that shop.
 
 Figure 5.6 should be inserted here to show the vendor profile dashboard or main vendor navigation area.
 
-Suggested caption: Figure 5.6. Vendor management area for catalogue, orders, promotions, and analytics.
+Suggested caption: Figure 5.6. Vendor management hub providing access to catalogue, orders, promotions, and analytics.
 
-From the project-outcome perspective, the most important vendor features are:
-
-- browsing and searching products within the vendor catalogue;
-- viewing system-generated product identifiers;
-- creating products with price, stock quantity, description, brand, category, and media;
-- editing product details after creation;
-- hiding or re-enabling products in the storefront;
-- managing multiple photos and optional video entries for each product;
-- maintaining shop information and store photos.
+The vendor catalogue workspace allows browsing and searching products within the vendor's own inventory, with each product displaying its system-generated identifier. Vendors can create new products with fields for price, stock quantity, description, brand, category, and media, and edit any of these details after initial creation. Products can be hidden to remove them temporarily from the storefront and later re-enabled when appropriate. Each product supports multiple photographs and optional video entries, and the vendor can also update shop profile information and store photographs through the same management interface.
 
 Figure 5.7 should be inserted here to show the product create/edit screen with brand, category, and media management.
 
 Suggested caption: Figure 5.7. Vendor catalogue maintenance screen for product editing and media management.
 
-The vendor order-management outcome is equally important. Vendors can list incoming orders, inspect order details, change order status, review shipping information, and process refund requests. The order screen distinguishes active orders from shipped orders, making it easier to support daily fulfilment work.
+Order management on the vendor side is equally central to the project outcome. Vendors can browse incoming orders, open order details, update the order status, inspect shipping information, and handle refund requests. The interface separates active orders from shipped orders so that day-to-day fulfilment tasks remain clearly organised.
 
 Figure 5.8 should be inserted here to show the vendor orders list and vendor order-detail view.
 
-Suggested caption: Figure 5.8. Vendor order-processing screens showing status actions and refund management.
+Suggested caption: Figure 5.8. Vendor order-processing screens with status actions and refund management.
 
-This part of the system covers the full commercial cycle from order receipt to fulfilment. Vendors can progress customer orders through to shipment and communicate status changes back to the customer through the notification mechanism.
+Together these features cover the complete commercial cycle from initial order receipt through to dispatch. Status changes made by the vendor are communicated back to the customer automatically through the notification system.
 
 ## 5.5 Wishlist, Promotions, Notifications, and Shop Discovery
 
-Beyond the core purchase flow, the project includes engagement features intended to improve realism and commercial value.
+In addition to the core transactional features, the project delivers several engagement-oriented capabilities.
 
-Customers can visit vendor shops directly, browse products within a shop, and search within that shop context. This makes the multi-vendor structure visible on the storefront rather than hidden purely in the backend.
+Customers can navigate directly to a vendor's shop page, view the shop's profile and photographs, browse the shop's products, and search within that shop. This gives the multi-vendor structure a visible presence on the storefront rather than confining it to backend logic.
 
-Customers can also add products to a wishlist for future purchase. Wishlist entries preserve price-related information at the time they are added, which supports promotional comparison and later conversion.
+Customers can add products to a personal wishlist for future consideration. Each wishlist entry records price-related information at the time of addition, enabling later comparison when promotional discounts are applied.
 
-On the vendor side, promotions can be created for products using a discount percentage and start/end dates. When a promotion becomes active for a product that appears in customer wishlists, the system generates sale notifications to the affected users. This links wishlist behaviour with promotional pricing rather than treating them as unrelated features.
+Vendors can create promotions for their products by specifying a discount percentage together with start and end dates. When a newly active promotion applies to a product that one or more customers have wishlisted, the system automatically generates sale notifications for those customers. This creates a direct connection between wishlist data and promotional activity.
 
-The notification system also informs users of important order and refund events, including new orders, order shipment, order holding, vendor-initiated order cancellation, refund requests, and refund outcomes. Together these notifications keep both parties informed after significant actions without requiring manual checking.
+The notification system covers a wider set of events as well, including new orders, order shipment, order holding, vendor-initiated order cancellation, refund requests, and refund outcomes. These event-driven notifications keep both customers and vendors informed of important changes without requiring either party to check manually.
 
 Figure 5.9 should be inserted here to show the wishlist screen, a promotion-management screen, and the notification panel.
 
-Suggested caption: Figure 5.9. Engagement features: wishlist, promotions, and event-driven notifications.
+Suggested caption: Figure 5.9. Engagement features: wishlist, promotion management, and event-driven notification panel.
 
-These features extend the project outcome beyond the minimum store-and-cart workflow by incorporating customer retention and re-engagement mechanisms alongside transactional processing.
+Collectively, these features add customer retention and re-engagement mechanisms to the project alongside its core transactional processing.
 
 ## 5.6 Analytics and Sample Report Layouts
 
-The system includes a vendor analytics dashboard that acts as the main report-style outcome of the project. Instead of producing static downloadable reports, the application generates live dashboard views from collected transaction and behaviour data.
+The vendor analytics dashboard serves as the main report-style deliverable of the project. Rather than producing static downloadable files, the application renders live dashboard views derived from accumulated transaction and behavioural data.
 
-The analytics dashboard includes:
-
-- summary cards for total views, total orders, revenue, and product count;
-- charts of product views over time and revenue over time;
-- top search queries and top viewed products;
-- top wishlisted products;
-- category-view breakdown;
-- a conversion funnel from product views to cart additions to completed orders;
-- recommended discount suggestions for products with strong interest but weak conversion.
+The dashboard opens with summary cards for total views, total orders, revenue, and active product count, giving the vendor an immediate snapshot of shop performance. Below the summary, line charts track product views over time and revenue over time, while ranked lists surface the top search queries and most-viewed products. A dedicated chart highlights the most-wishlisted products, and a pie chart shows the breakdown of views by product category. A conversion-funnel bar chart illustrates progression from product views through cart additions to completed orders, and a set of recommended discount suggestions targets products with high customer interest but low conversion.
 
 Figure 5.10 should be inserted here to show the analytics dashboard overview.
 
 Suggested caption: Figure 5.10. Vendor analytics dashboard with summary metrics and chart-based report layouts.
 
-The dashboard serves two purposes in the context of the project outcome. First, it shows that the application records behavioural and sales data beyond simple CRUD operations. Second, it provides sample report layouts in the form of structured business information that an assessor can evaluate alongside the transactional features.
+The dashboard fulfils two roles in the context of the project outcome. It demonstrates that the application captures behavioural and sales data that goes beyond basic data entry, and it provides structured report layouts that an assessor can examine as evidence of the system's analytical capabilities.
 
 Figure 5.11 should be inserted here to show the recommended-discount section and one or two supporting charts.
 
 Suggested caption: Figure 5.11. Analytics-derived discount recommendations and supporting behavioural charts.
 
-The recommendation section turns recorded views, wishlists, cart additions, and completed orders into a practical vendor decision aid, adding a business-intelligence dimension to the otherwise transactional application.
+The discount-recommendation section translates recorded views, wishlist additions, cart events, and completed orders into actionable suggestions for the vendor, giving the application a business-intelligence capability alongside its transactional functions.
 
 ## 5.7 Summary of the Delivered Outcome
 
-The completed project outcome is a functioning multi-vendor e-commerce system that supports customer shopping, vendor-operated shops, order processing, promotional engagement, user-generated reviews, and analytics-driven decision support. The most significant implemented outcomes are the end-to-end purchase workflow with split ordering by shop, role-specific vendor management, multi-step order handling with refund support, and the integration of wishlist, notification, and analytics features.
+The delivered project is a working multi-vendor e-commerce system encompassing customer shopping, vendor-operated shops, order processing, promotional engagement, user-generated reviews, and analytics-driven decision support. Its most significant outcomes are the end-to-end purchase workflow with automatic order splitting by shop, the role-specific vendor management workspace, the multi-step order lifecycle with refund handling, and the integrated wishlist, notification, and analytics features.
 
-The developed system supports realistic marketplace behaviour across both customer and vendor roles and provides sufficient visible functionality for an assessor to evaluate the depth and completeness of the implementation through the screenshots, interface layouts, and workflow descriptions presented in this chapter.
+Overall, the system supports realistic marketplace interactions for both customer and vendor roles and offers sufficient breadth and depth for an assessor to evaluate the completeness of the implementation through the screenshots, interface layouts, and workflow descriptions presented in this chapter.
